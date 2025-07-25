@@ -1,0 +1,30 @@
+name: Daily YouTube Scraper
+
+on:
+  schedule:
+    - cron: '0 15 * * *'  # Runs daily at 3PM UTC (adjust as needed)
+  workflow_dispatch:       # Allows you to run it manually too
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install chromium
+
+      - name: Write creds.json from secret
+        run: echo "${{ secrets.GOOGLE_CREDS_JSON }}" > creds.json
+
+      - name: Run scraper
+        run: python scrape.py
