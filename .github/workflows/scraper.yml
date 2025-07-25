@@ -23,9 +23,8 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install chromium
 
-      - name: Write creds.json from secret
-        run: |
-          printf '%s' "${{ secrets.GOOGLE_CREDS_JSON }}" > creds.json
+      - name: Decode creds.json from secret
+        run: echo "${{ secrets.GOOGLE_CREDS_JSON_B64 }}" | base64 --decode > creds.json
 
       - name: Run scraper
         run: python scrape.py
