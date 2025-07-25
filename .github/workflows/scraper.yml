@@ -24,7 +24,8 @@ jobs:
           python -m playwright install chromium
 
       - name: Write creds.json from secret
-        run: echo "${{ secrets.GOOGLE_CREDS_JSON }}" > creds.json
+        run: |
+          printf '%s' "${{ secrets.GOOGLE_CREDS_JSON }}" > creds.json
 
       - name: Run scraper
         run: python scrape.py
