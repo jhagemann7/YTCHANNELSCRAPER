@@ -124,7 +124,7 @@ async def scrape(search_query, page):
         for el in elements:
             href = await el.get_attribute("href")
             if href and re.match(r"^/@[a-zA-Z0-9_.-]+$", href):
-                found.add(href)
+                 found.add(href.lstrip('/'))
 
     print(f"✅ Found {len(found)} channels for '{search_query}'")
     return found
