@@ -2,12 +2,11 @@ name: Daily YouTube Scraper
 
 on:
   schedule:
-    - cron: '0 15 * * *'  # Runs daily at 3PM UTC (adjust as needed)
-  workflow_dispatch:       # Allows you to run it manually too
+    - cron: '0 15 * * *'  # daily at 3PM UTC
+  workflow_dispatch:
 
-# ✅ allow this workflow to push back to the repo
 permissions:
-  contents: write
+  contents: write   # allow push
 
 jobs:
   run-scraper:
@@ -17,7 +16,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          persist-credentials: true   # ✅ keep GITHUB_TOKEN for push
+          ref: main            # ensure we're on main
+          fetch-depth: 0       # full history so pushes work
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -35,15 +36,33 @@ jobs:
       - name: Run scraper
         run: python scrape.py
 
-      # ✅ NEW: commit keyword_index.txt if the script advanced it
+      # --- debug so we can see what's going on ---
+      - name: Show working dir status
+        run: |
+          ls -la
+          echo "----- git status -----"
+          git status
+          echo "----- keyword_index.txt (if present) -----"
+          [ -f keyword_index.txt ] && cat keyword_index.txt || echo "keyword_index.txt not found"
+
+      # --- commit only if file exists and changed ---
       - name: Commit updated keyword index
         run: |
-          if git diff --quiet --exit-code keyword_index.txt; then
-            echo "No index changes to commit."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add keyword_index.txt
-            git commit -m "chore: advance keyword index [skip ci]"
-            git push
+          if [ ! -f keyword_index.txt ]; then
+            echo "No keyword_index.txt found; skipping commit."
+            exit 0
           fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -- keyword_index.txt
+
+          if git diff --cached --quiet; then
+            echo "No index changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: advance keyword index [skip ci]"
+          # push back to main explicitly
+          git push origin HEAD:main
