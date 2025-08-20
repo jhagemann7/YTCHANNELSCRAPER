@@ -48,21 +48,26 @@ jobs:
       # --- commit only if file exists and changed ---
       - name: Commit updated keyword index
         run: |
+          # 1) skip if the index file isn't there
           if [ ! -f keyword_index.txt ]; then
             echo "No keyword_index.txt found; skipping commit."
             exit 0
           fi
 
+          # 2) set git identity
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add -- keyword_index.txt
+          # 3) force-add only the index file (ignore everything else)
+          git add -f -- keyword_index.txt
 
+          # 4) bail if nothing actually changed
           if git diff --cached --quiet; then
             echo "No index changes to commit."
             exit 0
           fi
 
+          # 5) commit and push back to main explicitly
           git commit -m "chore: advance keyword index [skip ci]"
-          # push back to main explicitly
           git push origin HEAD:main
+
