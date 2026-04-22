@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CreatorScope — Find & Rank YouTube Creators</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & Variables ─────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0b0d10;
+      --surface: #13161c;
+      --surface2: #1a1e27;
+      --border: #242830;
+      --border-bright: #353c4a;
+      --text: #e8eaf0;
+      --text-dim: #7a8199;
+      --text-faint: #3d4257;
+      --accent: #5eff8a;
+      --accent2: #3de3ff;
+      --accent3: #ff5e8a;
+      --gold: #ffd966;
+      --radius: 10px;
+      --mono: 'DM Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+      --display: 'Syne', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background grid ───────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    /* ── Layout ────────────────────────────────────────── */
+    .page { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ────────────────────────────────────────── */
+    header {
+      padding: 48px 0 32px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    .logo-block {}
+    .logo {
+      font-family: var(--display);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-dot {
+      width: 10px; height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+    .logo-sub {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+    .header-badge {
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Search Panel ──────────────────────────────────── */
+    .search-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 32px;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+    .search-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+    }
+    .panel-title {
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+
+    .search-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+      gap: 16px;
+      align-items: end;
+    }
+    @media (max-width: 900px) {
+      .search-grid { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .search-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    input, select {
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(94, 255, 138, 0.08);
+    }
+    input::placeholder { color: var(--text-faint); }
+    select option { background: var(--surface2); }
+
+    /* API key row */
+    .api-row {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: end;
+    }
+    @media (max-width: 600px) {
+      .api-row { grid-template-columns: 1fr; }
+    }
+
+    /* Search button */
+    .btn-search {
+      background: var(--accent);
+      color: #0b0d10;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--display);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 10px 28px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-search:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(94,255,138,0.3); }
+    .btn-search:active { transform: translateY(0); }
+    .btn-search:disabled { background: var(--text-faint); cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-search .spinner { display: none; width: 14px; height: 14px; border: 2px solid #0b0d10; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    .btn-search.loading .spinner { display: block; }
+    .btn-search.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Status bar ────────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      min-height: 36px;
+    }
+    .status-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .status-text .count { color: var(--accent); font-weight: 500; }
+    .status-text .cached-badge {
+      display: inline-block;
+      background: rgba(94,255,138,0.1);
+      color: var(--accent);
+      border: 1px solid rgba(94,255,138,0.2);
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      margin-left: 8px;
+    }
+    .export-btn {
+      background: transparent;
+      border: 1px solid var(--border-bright);
+      border-radius: 7px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.04em;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .export-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* ── Sort Controls ─────────────────────────────────── */
+    .sort-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .sort-chip {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      background: var(--surface);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex; align-items: center; gap: 5px;
+      user-select: none;
+    }
+    .sort-chip:hover { color: var(--text); border-color: var(--border-bright); }
+    .sort-chip.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: rgba(94,255,138,0.06);
+    }
+    .sort-chip .arrow { font-size: 9px; }
+
+    /* ── Table ─────────────────────────────────────────── */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead tr {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border-bright);
+    }
+    th {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 14px 16px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    td { padding: 16px; vertical-align: middle; }
+
+    /* Channel cell */
+    .channel-cell { display: flex; align-items: center; gap: 12px; }
+    .channel-thumb {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--surface2);
+      object-fit: cover;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .thumb-placeholder {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    .channel-name {
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .channel-name a { color: inherit; text-decoration: none; }
+    .channel-name a:hover { color: var(--accent2); }
+    .channel-desc {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Rank badge */
+    .rank-badge {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-faint);
+      width: 28px;
+      text-align: center;
+    }
+    .rank-badge.top { color: var(--gold); }
+
+    /* Stat cell */
+    .stat {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+    }
+    .stat-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+    /* Score bar */
+    .score-cell { min-width: 100px; }
+    .score-val {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+    .score-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .score-bar { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+    /* Sub-scores */
+    .sub-scores { display: flex; gap: 6px; flex-wrap: wrap; }
+    .sub-score {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      letter-spacing: 0.04em;
+    }
+    .sub-score.niche { background: rgba(94,255,138,0.08); color: var(--accent); }
+    .sub-score.eng { background: rgba(61,227,255,0.08); color: var(--accent2); }
+    .sub-score.cons { background: rgba(255,94,138,0.08); color: var(--accent3); }
+
+    /* Reason tooltip */
+    .reason-cell {
+      font-size: 12px;
+      color: var(--text-dim);
+      max-width: 220px;
+      line-height: 1.4;
+    }
+
+    /* Freq chip */
+    .freq-chip {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-radius: 5px;
+      padding: 3px 8px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    /* ── Empty / Error States ──────────────────────────── */
+    .state-box {
+      padding: 80px 24px;
+      text-align: center;
+    }
+    .state-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .state-title {
+      font-family: var(--display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .state-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .state-box.error .state-icon { color: var(--accent3); }
+    .state-box.error .state-title { color: var(--accent3); }
+
+    /* ── Scoring legend ────────────────────────────────── */
+    .legend {
+      margin-top: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .legend-item { display: flex; flex-direction: column; gap: 4px; }
+    .legend-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .legend-val {
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .legend-formula {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* ── Responsive tweaks ─────────────────────────────── */
+    @media (max-width: 768px) {
+      th:nth-child(6), td:nth-child(6),
+      th:nth-child(7), td:nth-child(7) { display: none; }
+    }
+    @media (max-width: 580px) {
+      th:nth-child(4), td:nth-child(4),
+      th:nth-child(5), td:nth-child(5) { display: none; }
+      .search-panel { padding: 20px; }
+    }
+
+    /* ── Animations ────────────────────────────────────── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .row-animate { animation: fadeIn 0.3s ease both; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-block">
+      <div class="logo">
+        <span class="logo-dot"></span>
+        CreatorScope
+      </div>
+      <div class="logo-sub">YouTube Creator Discovery Engine · v1.0 MVP</div>
+    </div>
+    <div class="header-badge">YouTube Data API v3</div>
+  </header>
+
+  <!-- Search Panel -->
+  <div class="search-panel">
+    <div class="panel-title">Search Filters</div>
+    <div class="search-grid">
+      <div class="field">
+        <label>Niche / Keyword</label>
+        <input type="text" id="keyword" placeholder="e.g. fitness, personal finance, woodworking" />
+      </div>
+      <div class="field">
+        <label>Min Subscribers</label>
+        <input type="number" id="min_subs" placeholder="e.g. 10000" min="0" />
+      </div>
+      <div class="field">
+        <label>Max Subscribers</label>
+        <input type="number" id="max_subs" placeholder="e.g. 1000000" min="0" />
+      </div>
+      <div class="field">
+        <label>Min Avg Views</label>
+        <input type="number" id="min_views" placeholder="e.g. 5000" min="0" />
+      </div>
+      <div class="field">
+        <label>Results to Fetch</label>
+        <select id="max_results">
+          <option value="10">10 channels</option>
+          <option value="20" selected>20 channels</option>
+          <option value="30">30 channels</option>
+          <option value="50">50 channels</option>
+        </select>
+      </div>
+    </div>
+    <div class="api-row">
+      <div class="field">
+        <label>YouTube API Key</label>
+        <input type="password" id="api_key" placeholder="AIza... (required if not set server-side)" />
+      </div>
+      <button class="btn-search" id="searchBtn" onclick="runSearch()">
+        <span class="spinner"></span>
+        <span class="btn-text">⌕ Search Creators</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div id="resultsSection" style="display:none">
+    <div class="status-bar">
+      <div class="status-text" id="statusText"></div>
+      <button class="export-btn" onclick="exportCSV()">↓ Export CSV</button>
+    </div>
+
+    <div class="sort-row" id="sortRow"></div>
+
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Channel</th>
+            <th>Subscribers</th>
+            <th>Avg Views (10 vids)</th>
+            <th>Upload Freq.</th>
+            <th>Fit Score</th>
+            <th>Sub-Scores</th>
+            <th>Why Ranked Here</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="table-wrap" id="emptyState">
+    <div class="state-box">
+      <span class="state-icon">🔭</span>
+      <div class="state-title">Ready to discover creators</div>
+      <div class="state-desc">Enter a keyword, set your filters, and hit Search. We'll rank YouTube channels by how well they fit your criteria.</div>
+    </div>
+  </div>
+
+  <!-- Error state -->
+  <div class="table-wrap error" id="errorState" style="display:none">
+    <div class="state-box error">
+      <span class="state-icon">⚠</span>
+      <div class="state-title" id="errorTitle">Something went wrong</div>
+      <div class="state-desc" id="errorDesc"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── State ───────────────────────────────────────────────
+  let allCreators = [];
+  let sortKey = 'final_fit_score';
+  let sortDir = -1; // -1 = desc, 1 = asc
+
+  const SORT_COLS = [
+    { key: 'final_fit_score', label: 'Fit Score' },
+    { key: 'subscriber_count', label: 'Subscribers' },
+    { key: 'avg_views_last_10_videos', label: 'Avg Views' },
+    { key: 'engagement_score', label: 'Engagement' },
+    { key: 'niche_match_score', label: 'Niche Match' },
+  ];
+
+  // ── Formatting helpers ──────────────────────────────────
+  function fmtNum(n) {
+    if (n === null || n === undefined) return '—';
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    return n.toLocaleString();
+  }
+
+  function scoreColor(v) {
+    if (v >= 0.7) return '#5eff8a';
+    if (v >= 0.4) return '#ffd966';
+    return '#ff5e8a';
+  }
+
+  // ── Search ──────────────────────────────────────────────
+  async function runSearch() {
+    const keyword = document.getElementById('keyword').value.trim();
+    if (!keyword) { alert('Please enter a keyword.'); return; }
+
+    const btn = document.getElementById('searchBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    hide('emptyState'); hide('errorState'); hide('resultsSection');
+
+    const body = {
+      keyword,
+      min_subscribers: intOrNull('min_subs'),
+      max_subscribers: intOrNull('max_subs'),
+      min_avg_views: intOrNull('min_views'),
+      max_results: parseInt(document.getElementById('max_results').value),
+      api_key: document.getElementById('api_key').value.trim() || undefined,
+    };
+
+    try {
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.error || 'API request failed', data.detail || '');
+        return;
+      }
+
+      allCreators = data.creators || [];
+      renderResults(data);
+
+    } catch (err) {
+      showError('Could not reach the server', 'Make sure the backend is running on port 3000.');
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  // ── Render ──────────────────────────────────────────────
+  function renderResults(data) {
+    if (!allCreators.length) {
+      show('emptyState');
+      document.querySelector('#emptyState .state-title').textContent = 'No creators found';
+      document.querySelector('#emptyState .state-desc').textContent =
+        'Try a broader keyword, wider subscriber range, or lower the minimum views.';
+      return;
+    }
+
+    // Status
+    const st = document.getElementById('statusText');
+    st.innerHTML = `Found <span class="count">${allCreators.length}</span> creators` +
+      (data.cached ? ' <span class="cached-badge">CACHED</span>' : '');
+
+    // Sort chips
+    renderSortChips();
+
+    // Table
+    renderTable();
+
+    // Legend
+    renderLegend();
+
+    show('resultsSection');
+  }
+
+  function renderSortChips() {
+    const row = document.getElementById('sortRow');
+    row.innerHTML = SORT_COLS.map(col => `
+      <div class="sort-chip ${col.key === sortKey ? 'active' : ''}" onclick="setSort('${col.key}')">
+        ${col.label}
+        ${col.key === sortKey ? `<span class="arrow">${sortDir === -1 ? '↓' : '↑'}</span>` : ''}
+      </div>
+    `).join('');
+  }
+
+  function setSort(key) {
+    if (sortKey === key) sortDir *= -1;
+    else { sortKey = key; sortDir = -1; }
+    renderSortChips();
+    renderTable();
+  }
+
+  function renderTable() {
+    const sorted = [...allCreators].sort((a, b) => {
+      const av = a[sortKey] ?? -1;
+      const bv = b[sortKey] ?? -1;
+      return (av - bv) * sortDir;
+    });
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = sorted.map((c, i) => {
+      const rank = i + 1;
+      const isTop = rank <= 3;
+      const score = c.final_fit_score;
+      const pct = Math.round(score * 100);
+      const color = scoreColor(score);
+
+      const thumb = c.thumbnail
+        ? `<img class="channel-thumb" src="${c.thumbnail}" alt="" />`
+        : `<div class="thumb-placeholder">${(c.channel_name || '?')[0].toUpperCase()}</div>`;
+
+      const freq = c.upload_frequency_estimate !== null
+        ? `<span class="freq-chip">${c.upload_frequency_estimate}x / mo</span>`
+        : '<span style="color:var(--text-faint);font-size:12px">unknown</span>';
+
+      return `
+        <tr class="row-animate" style="animation-delay:${i * 0.04}s">
+          <td><div class="rank-badge ${isTop ? 'top' : ''}">${rank}</div></td>
+          <td>
+            <div class="channel-cell">
+              ${thumb}
+              <div>
+                <div class="channel-name"><a href="${c.channel_url}" target="_blank" rel="noopener">${esc(c.channel_name)}</a></div>
+                ${c.description ? `<div class="channel-desc">${esc(c.description)}</div>` : ''}
+              </div>
+            </div>
+          </td>
+          <td><div class="stat">${fmtNum(c.subscriber_count)}</div></td>
+          <td><div class="stat">${fmtNum(c.avg_views_last_10_videos)}</div></td>
+          <td>${freq}</td>
+          <td class="score-cell">
+            <div class="score-val" style="color:${color}">${pct}<span style="font-size:10px;color:var(--text-dim)">/100</span></div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:${pct}%;background:${color}"></div></div>
+          </td>
+          <td>
+            <div class="sub-scores">
+              <span class="sub-score niche" title="Niche match">N ${Math.round(c.niche_match_score * 100)}</span>
+              <span class="sub-score eng" title="Engagement">E ${Math.round(c.engagement_score * 100)}</span>
+              <span class="sub-score cons" title="Consistency">C ${Math.round((c.consistency_score || 0) * 100)}</span>
+            </div>
+          </td>
+          <td><div class="reason-cell">${esc(c.ranking_reason || '—')}</div></td>
+        </tr>`;
+    }).join('');
+  }
+
+  function renderLegend() {
+    document.getElementById('legend').innerHTML = `
+      <div class="legend-item">
+        <span class="legend-label">Scoring Weights</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-label" style="color:var(--accent)">N — Niche Match</span>
+        <span class="legend-val" style="color:var(--accent)">35%</span>
+        <span class="legend-formula">keyword frequency in title/desc/tags</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-label" style="color:var(--accent2)">E — Engagement</span>
+        <span class="legend-val" style="color:var(--accent2)">40%</span>
+        <span class="legend-formula">avg_views ÷ subscribers (cap 20%)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-label" style="color:var(--accent3)">C — Consistency</span>
+        <span class="legend-val" style="color:var(--accent3)">25%</span>
+        <span class="legend-formula">upload frequency (cap 12/month)</span>
+      </div>
+    `;
+  }
+
+  // ── CSV Export ──────────────────────────────────────────
+  function exportCSV() {
+    if (!allCreators.length) return;
+    const headers = [
+      'Rank','Channel Name','Channel URL','Subscribers','Total Views',
+      'Avg Views (10 vids)','Upload Freq/Mo','Fit Score','Niche Score',
+      'Engagement Score','Consistency Score','Ranking Reason'
+    ];
+    const rows = [...allCreators]
+      .sort((a, b) => (b[sortKey] ?? 0) - (a[sortKey] ?? 0))
+      .map((c, i) => [
+        i + 1,
+        `"${(c.channel_name || '').replace(/"/g, '""')}"`,
+        c.channel_url,
+        c.subscriber_count,
+        c.total_views,
+        c.avg_views_last_10_videos,
+        c.upload_frequency_estimate ?? '',
+        c.final_fit_score,
+        c.niche_match_score,
+        c.engagement_score,
+        c.consistency_score ?? '',
+        `"${(c.ranking_reason || '').replace(/"/g, '""')}"`,
+      ].join(','));
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `creators_${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Utilities ───────────────────────────────────────────
+  function intOrNull(id) {
+    const v = document.getElementById(id).value.trim();
+    return v ? parseInt(v, 10) : null;
+  }
+  function show(id) { document.getElementById(id).style.display = ''; }
+  function hide(id) { document.getElementById(id).style.display = 'none'; }
+  function esc(s) {
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function showError(title, desc) {
+    document.getElementById('errorTitle').textContent = title;
+    document.getElementById('errorDesc').textContent = desc;
+    show('errorState');
+  }
+
+  // ── Enter key support ───────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !document.getElementById('searchBtn').disabled) runSearch();
+  });
+</script>
+</body>
+</html>
